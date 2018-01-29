@@ -1,0 +1,22 @@
+body {
+    background-image: url("./background.jpg");
+    color: white;
+}
+
+.videocontainer {
+    margin-left: 20px;
+    margin-top: 20px;
+    width: 50%;
+    height: 100%;
+    text-align: center;
+}
+
+.menubar {
+    width: 500px;
+    margin-left: 20px;
+    margin-top: 20px;
+}
+
+.results {
+
+}
