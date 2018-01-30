@@ -6,9 +6,8 @@ body {
 .videocontainer {
     margin-left: 20px;
     margin-top: 20px;
-    width: 50%;
-    height: 100%;
     text-align: center;
+    display: inline-block;
 }
 
 .menubar {
@@ -17,6 +16,22 @@ body {
     margin-top: 20px;
 }
 
-.results {
+.my_result {
+    width: 300px;
+    height: 175px;
+    margin-top: 20px;
+    margin-left: 20px;
+}
 
+.stats {
+    display: inline-block;
+}
+
+.results {
+    display: inline-block;
+    float: right;
+}
+
+.my_camera {
+    display: inline;
 }

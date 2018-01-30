@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="./webcamjs/webcam.js"></script>
-    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jqery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <link rel="stylesheet" type="text/css", href="./../assets/main.css">
     <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css"
           integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w"
@@ -13,49 +13,107 @@
 </head>
 <body>
     <div class="videocontainer">
-        <div id="my_camera" style="width:700px; height:575px;"></div>
+        <div id="my_camera" style="width:600px; height:475px;"></div>
+        <div class="results" id="results">
+            <div class="my_result" id="my_result"></div>
+            <div class="stats">
+                <h2>Face Rectangle:</h2>
+                <ul class="pure-menu-list" id="faceRectangle">
+                </ul>
+                <h2>Scores List:</h2>
+                <ul class="pure-menu-list" id="scores">
+                </ul>
+            </div>
+        </div>
     </div>
+
+
     <script language="JavaScript">
-		Webcam.attach( '#my_camera' );
 
+        // add python-esque format method to String prototype
+        if (!String.prototype.format) {
+            String.prototype.format = function() {
+                var args = arguments;
+                return this.replace(/{(\d+)}/g, function(match, number) {
+                    return typeof args[number] != 'undefined'
+                    ? args[number] : match;
+                });
+            };
+        }
+
+        // convert base64 to blob
+        makeblob = function (dataURL) {
+            var BASE64_MARKER = ';base64,';
+            if (dataURL.indexOf(BASE64_MARKER) == -1) {
+                var parts = dataURL.split(',');
+                var contentType = parts[0].split(':')[1];
+                var raw = decodeURIComponent(parts[1]);
+                return new Blob([raw], { type: contentType });
+            }
+            var parts = dataURL.split(BASE64_MARKER);
+            var contentType = parts[0].split(':')[1];
+            var raw = window.atob(parts[1]);
+            var rawLength = raw.length;
+
+            var uInt8Array = new Uint8Array(rawLength);
+
+            for (var i = 0; i < rawLength; ++i) {
+                uInt8Array[i] = raw.charCodeAt(i);
+            }
+            return new Blob([uInt8Array], { type: contentType });
+        }
+
+
+		Webcam.attach('#my_camera');
 		function take_snapshot() {
-			Webcam.snap( function(data_uri) {
-				var result = document.getElementById('my_result');
-                result.innerHTML = '<img src="'+data_uri+'" widht="400px" height="275px"/>';
+			Webcam.snap(function(data_uri) {
                 var image = new Image();
-                image.src = 'data:image/png;base64', data_uri;
-			} );
-		}
+                image.src = data_uri;
+                requestData = makeblob(data_uri);
+                $(function() {
+                    var params = {};
+                    $.ajax({
+                        url: "https://westus.api.cognitive.microsoft.com/emotion/v1.0/recognize?" + $.param(params),
+                        beforeSend: function(xhrObj){
+                            xhrObj.setRequestHeader("Content-Type","application/octet-stream");
+                            xhrObj.setRequestHeader("Ocp-Apim-Subscription-Key","805c9c0d22f2489686ce82d223d2f6b1");
+                        },
+                        type: "POST",
+                        processData: false,
+                        contentType: 'application/octet-stream',
+                        // Request body
+                        data: makeblob(data_uri),
+                    }).done(function(data) {
+                        // Get face rectangle dimensions
+                        var faceRectangle = data[0].faceRectangle;
+                        var faceRectangleList = document.getElementById("faceRectangle");
 
-        $function() {
-            var params = {};
+                        // Append to DOM
+                        for (var prop in faceRectangle) {
+                            var elem = document.createElement('li');
+                            elem.innerHTML = prop + ": " + faceRectangle[prop];
+                            faceRectangleList.appendChild(elem);
+                        }
 
-            $.ajax({
-                url: // API Key server location link here
-                beforeSend: function(xhrObj) {
-                    xhrObj.setRequestHeader("Content-Type", "application/json");
-                    xhrObj.setRequestHeader("Ocp-Apim-Subscription-Key", // Api key here);
-                },
-                type: "POST",
-                data: '{"url": "<>"}'
-            }).done(function(data)) {
-                var scores = data[0].scores;
-                var scroresList() = $("#scores");
+                        // Get emotion confidence scores
+                        var scores = data[0].scores;
+                        var scoresList = document.getElementById("scores");
 
-                for (var item in scores) {
-                    scroresList.append("<li>" + item + ": " + scores[item] + "</li>")
-                }
-            }).fail(function(err)) {
-                alert("Error: " + JSON.stringify(err));
-            });
-        });
+                        // Append to DOM
+                        for (var prop in scores) {
+                            var elem = document.createElement('li');
+                            elem.innerHTML = prop + ": " + scores[prop] * 100 + "%";
+                            scoresList.appendChild(elem);
+                        }
+                    }).fail(function(err) {
+                        alert("Error: " + JSON.stringify(err));
+                    });
+                });
+            })
+        }
 	</script>
 
     <div class="menubar">
         <a class="pure-button pure-button-primary" href="javascript:void(take_snapshot())">Analysieren</a>
-    </div>
-
-    <div id="results">
-        <div id="my_result"></div>
     </div>
 </body>
